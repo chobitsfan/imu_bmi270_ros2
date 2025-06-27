@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>bmi270_imu_node</name>
+  <version>0.0.1</version>
+  <description>ros2 publisher for bmi270</description>
+  <maintainer email="ludo@ludo.com">ludo</maintainer>
+  <license>TODO: License declaration</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>rclcpp</depend>
+  <depend>sensor_msgs</depend>
+  <!-- IMPORTANT: Add the dependency on bmi270_driver here -->
+  <depend>bmi270_driver</depend> 
+  
+  <exec_depend>i2c-tools</exec_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
+
