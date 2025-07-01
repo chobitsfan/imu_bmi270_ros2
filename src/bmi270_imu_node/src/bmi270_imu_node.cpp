@@ -36,7 +36,8 @@ public:
         timer_ = create_wall_timer(10ms, std::bind(&BMI270Node::timer_callback, this));
 
         // Open I2C device
-        i2c_fd_ = open("/dev/i2c-1", O_RDWR);
+        // set the bus here (defined in config.txt as a dto)
+        i2c_fd_ = open("/dev/i2c-1", O_RDWR); # change e.g. i2c-3`
         if (i2c_fd_ < 0) {
             RCLCPP_FATAL(get_logger(), "Failed to open I2C device /dev/i2c-1. Error: %s", strerror(errno));
             rclcpp::shutdown();
