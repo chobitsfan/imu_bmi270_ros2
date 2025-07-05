@@ -11,7 +11,8 @@
 #include <errno.h>        // For strerror(errno)
 
 // Include Bosch BMI270 API headers
-//  paths  to match project structure, see bmi270_driver package.xml and CMakeLists.txt
+//  paths  to match project structure, 
+//  see bmi270_driver package.xml and CMakeLists.txt
 #include "bmi270_driver/bmi2.h"
 #include "bmi270_driver/bmi270.h"
 // Although bmi2.h often pulls it in, explicitly including for definitions like bmi2_sens_data can sometimes help with visibility.
@@ -36,8 +37,8 @@ public:
         timer_ = create_wall_timer(10ms, std::bind(&BMI270Node::timer_callback, this));
 
         // Open I2C device
-        // set the bus here (defined in config.txt as a dto)
-        i2c_fd_ = open("/dev/i2c-1", O_RDWR); # change e.g. i2c-3`
+        // set the bus here (defined on the pi at /boot/firmware/config.txt as a dto)
+        i2c_fd_ = open("/dev/i2c-1", O_RDWR); // change e.g. i2c-3`
         if (i2c_fd_ < 0) {
             RCLCPP_FATAL(get_logger(), "Failed to open I2C device /dev/i2c-1. Error: %s", strerror(errno));
             rclcpp::shutdown();
@@ -45,7 +46,8 @@ public:
         }
 
         // Set I2C slave address for BMI270 (0x68 or 0x69)
-        // Ensure this matches the hardware configuration. BMI2_I2C_ADDR_PRIM is typically 0x68.
+        // Ensure this matches the hardware configuration. 
+        // BMI2_I2C_ADDR_PRIM is typically 0x68.
         // I hard code 0x68 to avoid "not declared in this scope" issues 
         if (ioctl(i2c_fd_, I2C_SLAVE, 0x68) < 0) {
             RCLCPP_FATAL(get_logger(), "Failed to set I2C address 0x%X. Please check your I2C address. Error: %s", 0x68, strerror(errno));
@@ -82,6 +84,7 @@ public:
         config[0].cfg.acc.filter_perf = BMI2_PERF_OPT_MODE; // Performance mode: Optimized
 
         // Gyroscope configuration
+        // all hardcoded for now, TODO see how to use a parameter file to set them 
         config[1].type = BMI2_GYRO;
         config[1].cfg.gyr.odr = BMI2_GYR_ODR_100HZ; // Output Data Rate: 100Hz
         config[1].cfg.gyr.range = BMI2_GYR_RANGE_2000; // Range: +/- 2000 degrees per second (dps)
