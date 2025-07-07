@@ -34,8 +34,8 @@ public:
     BMI270Node() : Node("bmi270_node")
     {
         // Initialize ROS2 publisher and timer
-        publisher_ = create_publisher<sensor_msgs::msg::Imu>("imu/data_raw", 10);
-        timer_ = create_wall_timer(10ms, std::bind(&BMI270Node::timer_callback, this));
+        publisher_ = create_publisher<sensor_msgs::msg::Imu>("/imu", 10);
+        timer_ = create_wall_timer(2ms, std::bind(&BMI270Node::timer_callback, this));
 
         // Open I2C device
         // set the bus here (defined on the pi at /boot/firmware/config.txt as a dto)
@@ -79,7 +79,7 @@ public:
 
         // Accelerometer configuration
         config[0].type = BMI2_ACCEL;
-        config[0].cfg.acc.odr = BMI2_ACC_ODR_100HZ; // Output Data Rate: 100Hz
+        config[0].cfg.acc.odr = BMI2_ACC_ODR_200HZ; // Output Data Rate: 100Hz
         config[0].cfg.acc.range = BMI2_ACC_RANGE_4G; // Range: +/- 4G
         config[0].cfg.acc.bwp = BMI2_ACC_NORMAL_AVG4; // Bandwidth parameter: Normal average 4
         config[0].cfg.acc.filter_perf = BMI2_PERF_OPT_MODE; // Performance mode: Optimized
@@ -87,7 +87,7 @@ public:
         // Gyroscope configuration
         // all hardcoded for now, TODO see how to use a parameter file to set them 
         config[1].type = BMI2_GYRO;
-        config[1].cfg.gyr.odr = BMI2_GYR_ODR_100HZ; // Output Data Rate: 100Hz
+        config[1].cfg.gyr.odr = BMI2_GYR_ODR_200HZ; // Output Data Rate: 100Hz
         config[1].cfg.gyr.range = BMI2_GYR_RANGE_2000; // Range: +/- 2000 degrees per second (dps)
         config[1].cfg.gyr.bwp = BMI2_GYR_NORMAL_MODE; // Bandwidth parameter: Normal mode
         config[1].cfg.gyr.noise_perf = BMI2_PERF_OPT_MODE; // Noise performance mode: Optimized
