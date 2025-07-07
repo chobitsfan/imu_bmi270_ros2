@@ -9,6 +9,7 @@
 #include <string.h>       // For memcpy
 #include <thread>         // For std::this_thread::sleep_for
 #include <errno.h>        // For strerror(errno)
+#include <time.h>
 
 // Include Bosch BMI270 API headers
 //  paths  to match project structure, 
@@ -130,38 +131,38 @@ private:
 
         // Read sensor data from BMI270
         // bmi2_get_sensor_data expects a pointer to a single bmi2_sens_data struct and the device struct
-        if (bmi2_get_sensor_data(&sensor_data, &dev_) != BMI2_OK) {
-            RCLCPP_WARN(get_logger(), "Failed to read sensor data. Check I2C connection.");
-            return;
+        if ((bmi2_get_sensor_data(&sensor_data, &dev_) == BMI2_OK) && (sensor_data.status & BMI2_DRDY_ACC) && (sensor_data.status & BMI2_DRDY_GYR)) {
+
+            // Create and populate ROS2 Imu message
+            auto msg = sensor_msgs::msg::Imu();
+            struct timespec tp;
+            clock_gettime(CLOCK_MONOTONIC, &tp);
+            msg.header.stamp = rclcpp::Time(tp.tv_sec * 1000000000 + tp.tv_nsec, RCL_STEADY_TIME);
+            msg.header.frame_id = "imu_link"; // Coordinate frame ID
+
+            // Convert raw accelerometer data to m/s^2
+            // Accessing acc data directly from the sensor_data struct
+            float acc_scale = (4.0f * 9.80665f) / 32768.0f; // Scale factor for +/-4G range (m/s^2 per LSB)
+            msg.linear_acceleration.x = sensor_data.acc.x * acc_scale;
+            msg.linear_acceleration.y = sensor_data.acc.y * acc_scale;
+            msg.linear_acceleration.z = sensor_data.acc.z * acc_scale;
+
+            // Convert raw gyroscope data to rad/s
+            // Accessing gyr data directly from the sensor_data struct
+            float gyro_scale = (2000.0f / 32768.0f) * (M_PI / 180.0f); // Scale factor for +/-2000 dps range (rad/s per LSB)
+            msg.angular_velocity.x = sensor_data.gyr.x * gyro_scale;
+            msg.angular_velocity.y = sensor_data.gyr.y * gyro_scale;
+            msg.angular_velocity.z = sensor_data.gyr.z * gyro_scale;
+
+            // The following is according to ros2 imu message:
+            // Gyroscope and Accelerometer covariance are usually set to 0 if not calculated
+            // If you have calibration data, you can set these. Otherwise, leave as 0
+            msg.angular_velocity_covariance[0] = -1; // Indicate no covariance data available
+            msg.linear_acceleration_covariance[0] = -1; // Indicate no covariance data available
+
+            // Publish the Imu message
+            publisher_->publish(msg);
         }
-
-        // Create and populate ROS2 Imu message
-        auto msg = sensor_msgs::msg::Imu();
-        msg.header.stamp = now(); // Current ROS2 time
-        msg.header.frame_id = "imu_link"; // Coordinate frame ID
-
-        // Convert raw accelerometer data to m/s^2
-        // Accessing acc data directly from the sensor_data struct
-        float acc_scale = (4.0f * 9.80665f) / 32768.0f; // Scale factor for +/-4G range (m/s^2 per LSB)
-        msg.linear_acceleration.x = sensor_data.acc.x * acc_scale;
-        msg.linear_acceleration.y = sensor_data.acc.y * acc_scale;
-        msg.linear_acceleration.z = sensor_data.acc.z * acc_scale;
-
-        // Convert raw gyroscope data to rad/s
-        // Accessing gyr data directly from the sensor_data struct
-        float gyro_scale = (2000.0f / 32768.0f) * (M_PI / 180.0f); // Scale factor for +/-2000 dps range (rad/s per LSB)
-        msg.angular_velocity.x = sensor_data.gyr.x * gyro_scale;
-        msg.angular_velocity.y = sensor_data.gyr.y * gyro_scale;
-        msg.angular_velocity.z = sensor_data.gyr.z * gyro_scale;
-
-        // The following is according to ros2 imu message:
-        // Gyroscope and Accelerometer covariance are usually set to 0 if not calculated
-        // If you have calibration data, you can set these. Otherwise, leave as 0
-        msg.angular_velocity_covariance[0] = -1; // Indicate no covariance data available
-        msg.linear_acceleration_covariance[0] = -1; // Indicate no covariance data available
-
-        // Publish the Imu message
-        publisher_->publish(msg);
     }
 
     rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr publisher_;
