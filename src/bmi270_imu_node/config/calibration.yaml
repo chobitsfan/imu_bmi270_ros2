@@ -1,0 +1,33 @@
+bmi270_imu_calibtd_node:
+  ros__parameters:
+    # Accelerometer Calibration Parameters (from imu_tk)
+    accel_bias_x: 0.0 
+    accel_bias_y: -1009.0 
+    accel_bias_z: 0.0 
+
+    accel_scale_x: 1.0
+    accel_scale_y: 1.0
+    accel_scale_z: 1.0
+
+    accel_mis_yz: 0.0 
+    accel_mis_zy: 0.0 
+    accel_mis_xz: 0.0 
+    accel_mis_zx: 0.0 
+    accel_mis_xy: 0.0 
+    accel_mis_yx: 0.0 
+
+    # Gyroscope Calibration Parameters (from imu_tk)
+    gyro_bias_x: 0.0 
+    gyro_bias_y: 0.0 
+    gyro_bias_z: 0.0 
+
+    gyro_scale_x: 1.0
+    gyro_scale_y: 1.0
+    gyro_scale_z: 1.0
+
+    gyro_mis_yz: 0.0 
+    gyro_mis_zy: 0.0 
+    gyro_mis_xz: 0.0 
+    gyro_mis_zx: 0.0 
+    gyro_mis_xy: 0.0 
+    gyro_mis_yx: 0.0 

@@ -11,7 +11,8 @@
 
   <depend>rclcpp</depend>
   <depend>sensor_msgs</depend>
-  <!-- IMPORTANT: Add the dependency on bmi270_driver here -->
+  <depend>eigen</depend> <test_depend>ament_lint_auto</test_depend>
+  <!--  bmi270_driver (directly from bosch API-->
   <depend>bmi270_driver</depend> 
   
   <exec_depend>i2c-tools</exec_depend>
