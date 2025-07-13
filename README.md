@@ -4,6 +4,7 @@ ROS2 package to use with the BMI270
 
 A WIP.
 Updates
+- added using calibration factors (bias, scale and misalignment) and a corresponding launch file
 - fifo header mode works but no SensorTime frames (current bmi270_fifo_node)
 - SensorTime are obtained but without IMU data being published (bmi270_fifo_node_SensorTime_no_imudata.cpp, this has been tested but not included in the CMakeLists)
 -
@@ -13,12 +14,12 @@ Relevant Bosch API example to further dig in:
     bmi270_examples/fifo_full_header_mode/fifo_full_header_mode.c
 
 Notes:
+- calibration factors can be obtained e.g. from imu-tk
 - SensorTime is not insert as a timestamp per IMU data samples, but a counter that wraps every 2¹⁴ ticks (≈640 seconds) only for some FIFO frames.
 - the original usage intent of the SensorTime was to adjust the ROS2 timestamp to get more accurate timing when using a camera and IMU together (ex for VIO).
 -
 
-
-This makes use of Bosch's API for their BMI270, see:
+This ros2 package makes use of Bosch's API for their BMI270, see:
 
 https://github.com/boschsensortec/BMI270_SensorAPI/tree/master
 
@@ -70,11 +71,19 @@ For now if the bus and addresses of the IMU are hardcoded in the node source cod
 
 See `i2c_fd_ = open("/dev/i2c-1", O_RDWR); # change e.g. i2c-3` 
 
+Then, for the basic polling node:
+
     ros2 run bmi270_imu_node bmi270_imu_node
 
-or
+or for using fifo (for settings such as fifo ODR,..., see code and bosch API)
 
     ros2 run bmi270_imu_node bmi270_fifo_node
+
+or for using calibrated factors with the polling node:
+
+    ros2 launch bmi270_imu_node bmi270_imu_calibrated.launch.py
+
+    ros2 run bmi270_imu_node bmi270_imu_calibtd_node
 
 
 You should then see the topic being publish:
@@ -83,12 +92,25 @@ You should then see the topic being publish:
 
     ros2 topic echo /imu/data_raw
 
+or (topic name may vary!) 
+
+    ros2 topic echo /imu
+
+
+### about calibration
+
+Use imu-tk for calibration, catpure raw imu data straight out of the ADC (raw = unscaled, unitless data, i.e. without application of scale factor).
+So the bias will be something like xxxx instead of a small value like x.xxxx
+
+The code is easy to adjust if the result of your imu-tk or other calibration is in SI units.
+
+TODO: test or add a switch depending on whether the calibration factor were obtained from physical units or from data straight out of the ADC. 
+
 ## python
 
 Not fully working but it's there.
 
 ## usefull links
-
 
 Ardupilot BMI270 driver (thanks Chobits):
 https://github.com/ArduPilot/ardupilot/blob/master/libraries/AP_InertialSensor/AP_InertialSensor_BMI270.cpp
