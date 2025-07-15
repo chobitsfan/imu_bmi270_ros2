@@ -26,7 +26,8 @@
 
 using namespace std::chrono_literals;
 
-#define BMI2_SENSORTIME_RESOLUTION (1.0 / 25600.0)
+// already defined in the bosch API
+// #define BMI2_SENSORTIME_RESOLUTION (1.0 / 25600.0)
 #define ACCEL_RESOLUTION (9.80665 / 8192.0)
 #define GYRO_RESOLUTION ((1.0 / 16.4) * (M_PI / 180.0))
 

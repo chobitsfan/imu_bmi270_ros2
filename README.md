@@ -96,6 +96,14 @@ or (topic name may vary!)
 
     ros2 topic echo /imu
 
+Usefull ros2 echo commands:
+
+echo the timestamp (in ns)
+ros2 topic echo /imu --field header.stamp
+ros2 topic echo /imu --field header.stamp.sec,header.stamp.nanosec
+
+shows the ODR (in Hz)
+ros2 topic hz /imu
 
 ### about calibration
 

@@ -16,8 +16,6 @@
 //  see bmi270_driver package.xml and CMakeLists.txt
 #include "bmi270_driver/bmi2.h"
 #include "bmi270_driver/bmi270.h"
-// Although bmi2.h often pulls it in, explicitly including for definitions like bmi2_sens_data can sometimes help with visibility.
-// #include "bmi270_driver/bmi2_defs.h"
 
 using namespace std::chrono_literals;
 
@@ -35,11 +33,13 @@ public:
     {
         // Initialize ROS2 publisher and timer
         publisher_ = create_publisher<sensor_msgs::msg::Imu>("/imu", 10);
-        timer_ = create_wall_timer(2ms, std::bind(&BMI270Node::timer_callback, this));
+        // adjust the time to the ODR
+        // timer_ = create_wall_timer(2ms, std::bind(&BMI270Node::timer_callback, this));
+        timer_ = create_wall_timer(200us, std::bind(&BMI270Node::timer_callback, this));
 
         // Open I2C device
         // set the bus here (defined on the pi at /boot/firmware/config.txt as a dto)
-        i2c_fd_ = open("/dev/i2c-1", O_RDWR); // change e.g. i2c-3`
+        i2c_fd_ = open("/dev/i2c-3", O_RDWR); // change e.g. i2c-3`
         if (i2c_fd_ < 0) {
             RCLCPP_FATAL(get_logger(), "Failed to open I2C device /dev/i2c-1. Error: %s", strerror(errno));
             rclcpp::shutdown();
