@@ -90,6 +90,7 @@ public:
         config[1].type = BMI2_GYRO;
         config[1].cfg.gyr.odr = BMI2_GYR_ODR_200HZ; // Output Data Rate: 100Hz
         config[1].cfg.gyr.range = BMI2_GYR_RANGE_2000; // Range: +/- 2000 degrees per second (dps)
+        config[1].cfg.gyr.ois_range = BMI2_GYR_RANGE_2000; //have to enable the ois_range bit (bit 3) for 2000dps as well, see ardupilot AP_InertialSensor_BMI270.cpp
         config[1].cfg.gyr.bwp = BMI2_GYR_NORMAL_MODE; // Bandwidth parameter: Normal mode
         config[1].cfg.gyr.noise_perf = BMI2_PERF_OPT_MODE; // Noise performance mode: Optimized
         config[1].cfg.gyr.filter_perf = BMI2_PERF_OPT_MODE; // Filter performance mode: Optimized
