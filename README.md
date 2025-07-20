@@ -16,6 +16,8 @@ Notes:
 - SensorTime is not insert as a timestamp per IMU data samples, but a counter that wraps every 2¹⁴ ticks (≈640 seconds) only for some FIFO frames.
 - the original usage intent of the SensorTime was to adjust the ROS2 timestamp to get more accurate timing when using a camera and IMU together (ex for VIO).
 -
+
+
 This makes use of Bosch's API for their BMI270, see:
 
 https://github.com/boschsensortec/BMI270_SensorAPI/tree/master
@@ -84,4 +86,12 @@ You should then see the topic being publish:
 ## python
 
 Not fully working but it's there.
+
+## usefull links
+
+
+Ardupilot BMI270 driver (thanks Chobits):
+https://github.com/ArduPilot/ardupilot/blob/master/libraries/AP_InertialSensor/AP_InertialSensor_BMI270.cpp
+
+Bosch API:
 
