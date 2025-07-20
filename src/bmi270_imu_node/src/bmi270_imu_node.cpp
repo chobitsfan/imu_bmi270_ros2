@@ -35,7 +35,7 @@ public:
     {
         // Initialize ROS2 publisher and timer
         publisher_ = create_publisher<sensor_msgs::msg::Imu>("/imu", 10);
-        timer_ = create_wall_timer(2ms, std::bind(&BMI270Node::timer_callback, this));
+        timer_ = create_wall_timer(1ms, std::bind(&BMI270Node::timer_callback, this));
 
         // Open I2C device
         // set the bus here (defined on the pi at /boot/firmware/config.txt as a dto)
@@ -64,6 +64,7 @@ public:
         dev_.write = bmi2_i2c_write; // Assign custom I2C write function
         dev_.delay_us = bmi2_delay_us; // Assign custom delay function
         dev_.read_write_len = 32; // Maximum bytes to read/write in a single transaction
+        dev_.config_file_ptr = NULL; // Assign to NULL to load the default config file. see common.c
 
         // Initialize BMI270 sensor
         if (bmi270_init(&dev_) != BMI2_OK) {
@@ -220,7 +221,7 @@ int8_t bmi2_i2c_write(uint8_t reg_addr, const uint8_t *data, uint32_t len, void 
     // Create a buffer to hold the register address followed by the data
     // The I2C write typically sends the register address first, then the data.
     // The size of the buffer is 'len' (for data) + 1 (for register address).
-    uint8_t buf[len + 1];
+    uint8_t buf[128];
 
     // Place the register address at the beginning of the buffer
     buf[0] = reg_addr;
