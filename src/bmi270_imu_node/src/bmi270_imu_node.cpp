@@ -4,6 +4,7 @@
 #include <fcntl.h>        // For open()
 #include <unistd.h>       // For close(), read(), write()
 #include <linux/i2c-dev.h> // For I2C_SLAVE
+#include <linux/i2c.h>
 #include <sys/ioctl.h>    // For ioctl()
 #include <cmath>          // For M_PI
 #include <string.h>       // For memcpy
@@ -35,7 +36,7 @@ public:
     {
         // Initialize ROS2 publisher and timer
         publisher_ = create_publisher<sensor_msgs::msg::Imu>("/imu", 10);
-        timer_ = create_wall_timer(1ms, std::bind(&BMI270Node::timer_callback, this));
+        timer_ = create_wall_timer(200us, std::bind(&BMI270Node::timer_callback, this));
 
         // Open I2C device
         // set the bus here (defined on the pi at /boot/firmware/config.txt as a dto)
@@ -81,7 +82,7 @@ public:
         // Accelerometer configuration
         config[0].type = BMI2_ACCEL;
         config[0].cfg.acc.odr = BMI2_ACC_ODR_200HZ; // Output Data Rate: 100Hz
-        config[0].cfg.acc.range = BMI2_ACC_RANGE_4G; // Range: +/- 4G
+        config[0].cfg.acc.range = BMI2_ACC_RANGE_8G; // Range: +/- 8G, the same as oak-d lite, see https://github.com/luxonis/depthai-core/issues/886
         config[0].cfg.acc.bwp = BMI2_ACC_NORMAL_AVG4; // Bandwidth parameter: Normal average 4
         config[0].cfg.acc.filter_perf = BMI2_PERF_OPT_MODE; // Performance mode: Optimized
 
@@ -90,7 +91,7 @@ public:
         config[1].type = BMI2_GYRO;
         config[1].cfg.gyr.odr = BMI2_GYR_ODR_200HZ; // Output Data Rate: 100Hz
         config[1].cfg.gyr.range = BMI2_GYR_RANGE_2000; // Range: +/- 2000 degrees per second (dps)
-        config[1].cfg.gyr.ois_range = BMI2_GYR_RANGE_2000; //have to enable the ois_range bit (bit 3) for 2000dps as well, see ardupilot AP_InertialSensor_BMI270.cpp
+        config[1].cfg.gyr.ois_range = BMI2_GYR_OIS_2000; //have to enable the ois_range bit (bit 3) for 2000dps as well, see ardupilot AP_InertialSensor_BMI270.cpp
         config[1].cfg.gyr.bwp = BMI2_GYR_NORMAL_MODE; // Bandwidth parameter: Normal mode
         config[1].cfg.gyr.noise_perf = BMI2_PERF_OPT_MODE; // Noise performance mode: Optimized
         config[1].cfg.gyr.filter_perf = BMI2_PERF_OPT_MODE; // Filter performance mode: Optimized
@@ -127,6 +128,9 @@ public:
 private:
     void timer_callback()
     {
+        static double acc_scale = (8.0 * 9.80665) / 32768.0; // Scale factor for +/-8G range (m/s^2 per LSB)
+        static double gyro_scale = (2000.0 / 32768.0) * (M_PI / 180.0); // Scale factor for +/-2000 dps range (rad/s per LSB)
+
         // Declaring a single bmi2_sens_data struct
         // as bmi2_get_sensor_data populates it with all enabled sensor data
         struct bmi2_sens_data sensor_data;
@@ -134,24 +138,22 @@ private:
         // Read sensor data from BMI270
         // bmi2_get_sensor_data expects a pointer to a single bmi2_sens_data struct and the device struct
         if ((bmi2_get_sensor_data(&sensor_data, &dev_) == BMI2_OK) && (sensor_data.status & BMI2_DRDY_ACC) && (sensor_data.status & BMI2_DRDY_GYR)) {
-
             // Create and populate ROS2 Imu message
             auto msg = sensor_msgs::msg::Imu();
             struct timespec tp;
-            clock_gettime(CLOCK_MONOTONIC, &tp);
-            msg.header.stamp = rclcpp::Time(tp.tv_sec * 1000000000 + tp.tv_nsec, RCL_STEADY_TIME);
+            clock_gettime(CLOCK_BOOTTIME, &tp);
+            msg.header.stamp.sec = tp.tv_sec;
+            msg.header.stamp.nanosec = tp.tv_nsec;
             msg.header.frame_id = "imu_link"; // Coordinate frame ID
 
             // Convert raw accelerometer data to m/s^2
             // Accessing acc data directly from the sensor_data struct
-            float acc_scale = (4.0f * 9.80665f) / 32768.0f; // Scale factor for +/-4G range (m/s^2 per LSB)
             msg.linear_acceleration.x = sensor_data.acc.x * acc_scale;
             msg.linear_acceleration.y = sensor_data.acc.y * acc_scale;
             msg.linear_acceleration.z = sensor_data.acc.z * acc_scale;
 
             // Convert raw gyroscope data to rad/s
             // Accessing gyr data directly from the sensor_data struct
-            float gyro_scale = (2000.0f / 32768.0f) * (M_PI / 180.0f); // Scale factor for +/-2000 dps range (rad/s per LSB)
             msg.angular_velocity.x = sensor_data.gyr.x * gyro_scale;
             msg.angular_velocity.y = sensor_data.gyr.y * gyro_scale;
             msg.angular_velocity.z = sensor_data.gyr.z * gyro_scale;
@@ -185,6 +187,38 @@ private:
  */
 int8_t bmi2_i2c_read(uint8_t reg_addr, uint8_t *data, uint32_t len, void *intf_ptr)
 {
+// see https://github.com/CoRoLab-Berlin/bmi270_c
+#if 1
+    int fd = *(int*)intf_ptr;
+    struct i2c_rdwr_ioctl_data i2c_data;
+    struct i2c_msg i2c_msg[2];
+    uint8_t write_buf[1] = {reg_addr};
+
+    // Setup I2C write operation to send register address to device
+    i2c_msg[0].addr = 0x68;
+    i2c_msg[0].flags = 0;
+    i2c_msg[0].len = sizeof(write_buf);
+    i2c_msg[0].buf = write_buf;
+
+    // Setup I2C read operation to read data from device
+    i2c_msg[1].addr = 0x68;
+    i2c_msg[1].flags = I2C_M_RD;
+    i2c_msg[1].len = len;
+    i2c_msg[1].buf = data;
+
+    // Setup I2C data struct for ioctl
+    i2c_data.msgs = i2c_msg;
+    i2c_data.nmsgs = 2;
+
+    // Send I2C transaction to read data from registers
+    if (ioctl(fd, I2C_RDWR, &i2c_data) < 0)
+    {
+        printf("Failed to read from I2C device\n");
+        return BMI2_E_COM_FAIL;
+    }
+
+    return BMI2_OK;
+#else
     // Cast the void pointer back to an int pointer to get the file descriptor
     int fd = *(int *)intf_ptr;
 
@@ -202,6 +236,7 @@ int8_t bmi2_i2c_read(uint8_t reg_addr, uint8_t *data, uint32_t len, void *intf_p
 
     // Return success
     return BMI2_OK;
+#endif
 }
 
 /**
@@ -224,6 +259,7 @@ int8_t bmi2_i2c_write(uint8_t reg_addr, const uint8_t *data, uint32_t len, void 
     // The size of the buffer is 'len' (for data) + 1 (for register address).
     uint8_t buf[128];
 
+    if (len > 127) { printf("oops!\n"); return BMI2_E_COM_FAIL; }
     // Place the register address at the beginning of the buffer
     buf[0] = reg_addr;
     // Copy the data to be written into the buffer, starting after the register address
