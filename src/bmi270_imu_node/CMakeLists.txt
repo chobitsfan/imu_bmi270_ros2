@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.8)
 project(bmi270_imu_node)
 
+set(CMAKE_BUILD_TYPE "Release")
+set(CMAKE_CXX_FLAGS_RELEASE "-Wall -O1")
+
 # Set C++ version
 if(NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 17)

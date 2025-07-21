@@ -191,29 +191,29 @@ int8_t bmi2_i2c_read(uint8_t reg_addr, uint8_t *data, uint32_t len, void *intf_p
 #if 1
     int fd = *(int*)intf_ptr;
     struct i2c_rdwr_ioctl_data i2c_data;
-    struct i2c_msg i2c_msg[2];
+    struct i2c_msg i2c_msgs[2];
     uint8_t write_buf[1] = {reg_addr};
 
     // Setup I2C write operation to send register address to device
-    i2c_msg[0].addr = 0x68;
-    i2c_msg[0].flags = 0;
-    i2c_msg[0].len = sizeof(write_buf);
-    i2c_msg[0].buf = write_buf;
+    i2c_msgs[0].addr = 0x68;
+    i2c_msgs[0].flags = 0;
+    i2c_msgs[0].len = sizeof(write_buf);
+    i2c_msgs[0].buf = write_buf;
 
     // Setup I2C read operation to read data from device
-    i2c_msg[1].addr = 0x68;
-    i2c_msg[1].flags = I2C_M_RD;
-    i2c_msg[1].len = len;
-    i2c_msg[1].buf = data;
+    i2c_msgs[1].addr = 0x68;
+    i2c_msgs[1].flags = I2C_M_RD;
+    i2c_msgs[1].len = len;
+    i2c_msgs[1].buf = data;
 
     // Setup I2C data struct for ioctl
-    i2c_data.msgs = i2c_msg;
+    i2c_data.msgs = i2c_msgs;
     i2c_data.nmsgs = 2;
 
     // Send I2C transaction to read data from registers
     if (ioctl(fd, I2C_RDWR, &i2c_data) < 0)
     {
-        printf("Failed to read from I2C device\n");
+        printf("i2c read failed\n");
         return BMI2_E_COM_FAIL;
     }
 
@@ -251,15 +251,46 @@ int8_t bmi2_i2c_read(uint8_t reg_addr, uint8_t *data, uint32_t len, void *intf_p
  */
 int8_t bmi2_i2c_write(uint8_t reg_addr, const uint8_t *data, uint32_t len, void *intf_ptr)
 {
+#if 1
+    int fd = *(int*)intf_ptr;
+    struct i2c_rdwr_ioctl_data i2c_data;
+    struct i2c_msg i2c_msgs[1];
+    uint8_t write_buf[64] = {reg_addr};
+
+    if (len > 63) {
+        printf("i2c write size too large\n");
+        return BMI2_E_COM_FAIL;
+    }
+    memcpy(&write_buf[1], data, len);
+
+    // Setup I2C write operation to send register address and data to device
+    i2c_msgs[0].addr = 0x68;
+    i2c_msgs[0].flags = 0;
+    i2c_msgs[0].len = len + 1;
+    i2c_msgs[0].buf = write_buf;
+
+    // Setup I2C data struct for ioctl
+    i2c_data.msgs = i2c_msgs;
+    i2c_data.nmsgs = 1;
+
+    // Send I2C transaction to write data to register
+    if (ioctl(fd, I2C_RDWR, &i2c_data) < 0)
+    {
+        printf("i2c write failed\n");
+        return BMI2_E_COM_FAIL;
+    }
+
+    return BMI2_OK;
+#else
     // Cast the void pointer back to an int pointer to get the file descriptor
     int fd = *(int *)intf_ptr;
 
     // Create a buffer to hold the register address followed by the data
     // The I2C write typically sends the register address first, then the data.
     // The size of the buffer is 'len' (for data) + 1 (for register address).
-    uint8_t buf[128];
+    uint8_t buf[64];
 
-    if (len > 127) { printf("oops!\n"); return BMI2_E_COM_FAIL; }
+    if (len > 63) { printf("i2c write size too large\n"); return BMI2_E_COM_FAIL; }
     // Place the register address at the beginning of the buffer
     buf[0] = reg_addr;
     // Copy the data to be written into the buffer, starting after the register address
@@ -274,6 +305,7 @@ int8_t bmi2_i2c_write(uint8_t reg_addr, const uint8_t *data, uint32_t len, void 
 
     // Return success
     return BMI2_OK;
+#endif
 }
 
 /**
